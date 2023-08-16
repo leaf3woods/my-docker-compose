@@ -1,0 +1,81 @@
+############## compose version ###############
+##  compose file format       docker engine ##  
+##  1	                      1.9.0+        ##
+##  2.0	                      1.10.0+       ##
+##  2.1	                      1.12.0+       ##
+##  2.2, 3.0, 3.1, 3.2	      1.13.0+       ##
+##  2.3, 3.3, 3.4, 3.5        17.06.0+      ##
+##  2.4	                      17.12.0+      ##
+##  3.6	                      18.02.0+      ##
+##  3.7	                      18.06.0+      ##
+##############################################
+version: '3'
+############# configure services #############
+services:
+
+################# database ################### 
+  database:
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: yes
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: yes
+    ports:
+      - "13432:5432"
+    volumes:
+      - ./database/postgres/data:/var/lib/postgresql/data
+    restart: always
+
+################## cacahe ####################
+  cache:
+    image: redis:alpine
+    ports:
+      - '11379:16379'
+    environment:
+      REDIS_PASSWORD: yes
+    volumes:
+      - ./cache/redis/redis.conf:/etc/redis/redis.conf
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    command: /bin/sh -c "redis-server /etc/redis/redis.conf"
+    restart: always
+
+################### queue #####################
+  queue:
+    image: eclipse-mosquitto:latest
+    ports:
+      - '1883:1883'
+      - '8883:8883'
+      - '9001:9001'
+      - '8081:8081'
+    volumes:
+      - ./queue/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./queue/mqtt/pwd.txt:/mosquitto/pwd.txt
+      - $HOME/certs:/mosquitto/certs
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+
+#################### file #####################
+  file:
+    image: atmoz/sftp:alpine
+    ports:
+      - '13222:22'
+    volumes:
+      - ./file/sftp/users.conf:/etc/sftp/users.conf:ro
+      # - ./sftp/keys:/home/firmware/.ssh/keys:ro
+      - ./file/sftp/stream:/home/yes/stream
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+
+#################### proxy ######################
+  proxy:
+    image: nginx:alpine
+    #ports:
+      # - '2223:2222'
+    volumes:
+      - ./proxy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
